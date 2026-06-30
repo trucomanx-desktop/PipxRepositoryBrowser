@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pipx_repository_browser"
+version = "0.1.0"
+description = "Browse curated Python package repositories and manage installations with pipx."
+readme = "README.md"
+authors = [{name = "Fernando Pujaico Rivera", email = "fernando.pujaico.rivera@gmail.com"}]
+maintainers = [{name = "Fernando Pujaico Rivera", email = "fernando.pujaico.rivera@gmail.com"}]
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+license = "GPL-3.0-only WITH Classpath-Exception-2.0 OR BSD-3-Clause"
+license-files = ["LICENSE"]
+keywords = ["package", "market"]
+dependencies = [
+    "PyQt5"
+]
+
+[project.urls]
+"Bug Reports" = "https://github.com/trucomanx-desktop/PipxRepositoryBrowser/issues"
+"Funding" = "https://trucomanx.github.io/en/funding.html"
+"Documentation" = "https://github.com/trucomanx-desktop/PipxRepositoryBrowser/tree/main/doc"
+"Source" = "https://github.com/trucomanx-desktop/PipxRepositoryBrowser"
+
+[project.scripts]
+"pipx-repository-browser" = "pipx_repository_browser.program:main"
+
+[tool.setuptools]
+packages = ["pipx_repository_browser", "pipx_repository_browser.modules"]
+
+[tool.setuptools.package-data]
+"pipx_repository_browser" = ["icons/*.png","icons/*.svg","data/default.json"]

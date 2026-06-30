@@ -600,7 +600,7 @@ class MainWindow(QMainWindow):
         
         #
         self.directory_action = QAction(
-            QIcon.fromTheme("folder-open"),
+            QIcon(resource_path("icons", "folder-drag-accept.png")),
             CONFIG["toolbar_directory"],
             self
         )
@@ -609,7 +609,7 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction(self.directory_action)
         
         #
-        self.configure_action = QAction(QIcon.fromTheme("document-properties"), 
+        self.configure_action = QAction(QIcon(resource_path("icons", "text-configure.png")),
                                         CONFIG["toolbar_configure"], 
                                         self)
         self.configure_action.setToolTip(CONFIG["toolbar_configure_tooltip"])
@@ -617,7 +617,7 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction(self.configure_action)
         
         #
-        self.about_action = QAction(QIcon.fromTheme("help-about"), 
+        self.about_action = QAction(QIcon(resource_path("icons", "status_help.png")),
                                     CONFIG["toolbar_about"], 
                                     self)
         self.about_action.setToolTip(CONFIG["toolbar_about_tooltip"])
@@ -625,7 +625,7 @@ class MainWindow(QMainWindow):
         self.toolbar.addAction(self.about_action)
         
         # Coffee
-        self.coffee_action = QAction(   QIcon.fromTheme("emblem-favorite"), 
+        self.coffee_action = QAction(   QIcon(resource_path("icons", "emote-love.png")),
                                         CONFIG["toolbar_coffee"], 
                                         self)
         self.coffee_action.setToolTip(CONFIG["toolbar_coffee_tooltip"])
@@ -687,9 +687,8 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
        
     '''
-    #ensure_mime_type("npy", "application/x-npy", "NumPy array file")
     icon_path=resource_path("icons", "logo.png")
-    extras="" # "MimeType=text/vnd.graphviz;" # "MimeType=application/x-npy;"
+    extras="" 
     
     create_desktop_directory()    
     create_desktop_menu()

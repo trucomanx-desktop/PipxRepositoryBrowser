@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 #!/usr/bin/env python3
 import pathlib
 import sys
@@ -43,10 +41,9 @@ classifiers = [
 ]
 license = "GPL-3.0-only WITH Classpath-Exception-2.0 OR BSD-3-Clause"
 license-files = ["LICENSE"]
-keywords = ["writing", "translate"]
+keywords = ["package", "market"]
 dependencies = [
-    "PyQt5",
-    "deep-consultation"
+    "PyQt5"
 ]
 
 [project.urls]
@@ -62,7 +59,7 @@ dependencies = [
 packages = ["{__package__}", "{__package__}.modules"]
 
 [tool.setuptools.package-data]
-"{__package__}" = ["icons/logo.png"]
+"{__package__}" = ["icons/*.png","icons/*.svg"]
 """
 
 # Escreve o pyproject.toml
