@@ -683,7 +683,7 @@ class MainWindow(QMainWindow):
         else:  # Linux
             subprocess.run(["xdg-open", directory])
 
-if __name__ == "__main__":
+def main:
     signal.signal(signal.SIGINT, signal.SIG_DFL)
        
     icon_path=resource_path("icons", "logo.png")
@@ -722,4 +722,7 @@ if __name__ == "__main__":
     window = MainWindow()
     window.show()
     sys.exit(app.exec_())
+
+if __name__ == "__main__":
+    main()
 
