@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Small PyQt5/pipx package browser driven by repository JSON files.
 
-Set REPOSITORIES_PATH (and optionally INSTALLED_FILEPATH) before running, e.g.:
-    REPOSITORIES_PATH=./repositories python3 package_browser.py
 """
 
 from __future__ import annotations
@@ -11,13 +9,14 @@ import json
 import os
 import subprocess
 import sys
+import signal
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
 from urllib.request import Request, urlopen
 
-from PyQt5.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool, pyqtSignal
-from PyQt5.QtGui import QColor, QFont, QIcon, QPixmap
+from PyQt5.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool, QUrl, pyqtSignal
+from PyQt5.QtGui import QColor, QFont, QIcon, QPixmap, QDesktopServices
 from PyQt5.QtWidgets import (
     QApplication,
     QDialog,
@@ -34,13 +33,70 @@ from PyQt5.QtWidgets import (
     QScrollArea,
     QStackedWidget,
     QToolButton,
+    QToolBar,
     QVBoxLayout,
     QWidget,
+    QSizePolicy, 
+    QAction
 )
 
-REPOSITORIES_PATH = Path(os.environ.get("REPOSITORIES_PATH", "repositories"))
-INSTALLED_FILEPATH = Path(os.environ.get("INSTALLED_FILEPATH", "installed.json"))
-DEFAULT_ICON_SIZE = 64
+
+import pipx_repository_browser.about as about
+import pipx_repository_browser.modules.configure as configure 
+from pipx_repository_browser.modules.resources import resource_path
+
+from pipx_repository_browser.modules.wabout    import show_about_window
+from pipx_repository_browser.desktop import create_desktop_file, create_desktop_directory, create_desktop_menu
+
+
+
+
+# ---------- Path to config file ----------
+CONFIG_PATH = os.path.join( os.path.expanduser("~"),
+                            ".config", 
+                            about.__package__, 
+                            "config.json" )
+
+DEFAULT_CONTENT={   
+    "toolbar_directory": "Directory",
+    "toolbar_directory_tooltip": "Open the repository directory",
+    "toolbar_configure": "Configure",
+    "toolbar_configure_tooltip": "Open the configure Json file of program GUI",
+    "toolbar_about": "About",
+    "toolbar_about_tooltip": "About the program",
+    "toolbar_coffee": "Coffee",
+    "toolbar_coffee_tooltip": "Buy me a coffee (TrucomanX)",
+    "window_width": 1024,
+    "window_height": 800,
+    "default_icon_size": 64
+}
+
+configure.verify_default_config(CONFIG_PATH,default_content=DEFAULT_CONTENT)
+
+CONFIG=configure.load_config(CONFIG_PATH)
+
+# ---------------------------------------
+REPOSITORIES_DIR = os.path.join( os.path.expanduser("~"),
+                            ".config", 
+                            about.__package__, 
+                            "repositories" )
+REPOSITORY_DEFAULT_PATH = os.path.join( REPOSITORIES_DIR,
+                            "default.json" )
+
+with open(resource_path("data", "default.json"), "r", encoding="utf-8") as f:
+    DEFAULT_REPOSITORY_CONTENT = json.load(f)
+
+configure.verify_default_config(REPOSITORY_DEFAULT_PATH,default_content=DEFAULT_REPOSITORY_CONTENT)
+
+# ---------------------------------------
+INSTALLED_FILEPATH = os.path.join( os.path.expanduser("~"),
+                            ".config", 
+                            about.__package__, 
+                            "installed.json" )
+
+INSTALLED_FILEPATH = Path(INSTALLED_FILEPATH)
+
+# ---------------------------------------
 
 
 def fetch_json(url: str) -> dict:
@@ -63,7 +119,7 @@ def fetch_image_data(url: str) -> bytes:
         return b""
 
 
-def pixmap_from_data(data: bytes, size: int = DEFAULT_ICON_SIZE) -> QPixmap:
+def pixmap_from_data(data: bytes, size: int = CONFIG["default_icon_size"]) -> QPixmap:
     if not data:
         pixmap = QPixmap(size, size)
         pixmap.fill(Qt.transparent)
@@ -249,7 +305,7 @@ class CategorySection(QWidget):
         self.button.clicked.connect(self.toggle)
         self.list_widget = QListWidget()
         self.list_widget.setViewMode(QListWidget.IconMode)
-        self.list_widget.setIconSize(QSize(DEFAULT_ICON_SIZE, DEFAULT_ICON_SIZE))
+        self.list_widget.setIconSize(QSize(CONFIG["default_icon_size"], CONFIG["default_icon_size"]))
         self.list_widget.setGridSize(QSize(128, 108))
         self.list_widget.setResizeMode(QListWidget.Adjust)
         self.list_widget.setWrapping(True)
@@ -289,8 +345,16 @@ class CategorySection(QWidget):
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("PyPI Package Browser")
-        self.resize(1050, 720)
+        
+        self.setWindowTitle(about.__program_name__)
+        self.resize(CONFIG["window_width"], CONFIG["window_height"])
+        
+        ## Icon
+        # Get base directory for icons
+        self.icon_path = resource_path("icons", "logo.png")
+        self.setWindowIcon(QIcon(self.icon_path)) 
+
+        
         self.thread_pool = QThreadPool.globalInstance()
         self.packages: List[RepositoryPackage] = []
         self.installed: Dict[str, dict] = {}
@@ -298,6 +362,8 @@ class MainWindow(QMainWindow):
         self.current_package: Optional[RepositoryPackage] = None
         self.screenshots: List[QPixmap] = []
         self.screenshot_index = 0
+
+        self._create_toolbar()
         self._build_ui()
         self.load_repositories()
 
@@ -372,7 +438,7 @@ class MainWindow(QMainWindow):
     def load_repositories(self) -> None:
         self.progress.setVisible(True)
         self.progress.setRange(0, 1)
-        worker = RepositoryLoader(REPOSITORIES_PATH)
+        worker = RepositoryLoader(Path(REPOSITORIES_DIR))
         worker.signals.progress.connect(lambda value, total, text: (self.progress.setRange(0, total), self.progress.setValue(value), self.progress.setFormat(text)))
         worker.signals.packages_loaded.connect(self.on_packages_loaded)
         self.thread_pool.start(worker)
@@ -523,9 +589,139 @@ class MainWindow(QMainWindow):
         self.populate_packages()
         self.show_command_output(ok, message)
 
+    def _create_toolbar(self):
+        self.toolbar = self.addToolBar("Main")
+        self.toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+
+        # Adicionar o espaçador
+        self.toolbar_spacer = QWidget()
+        self.toolbar_spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.toolbar.addWidget(self.toolbar_spacer)
+        
+        #
+        self.directory_action = QAction(
+            QIcon.fromTheme("folder-open"),
+            CONFIG["toolbar_directory"],
+            self
+        )
+        self.directory_action.setToolTip(CONFIG["toolbar_directory_tooltip"])
+        self.directory_action.triggered.connect(self.open_repository_directory)
+        self.toolbar.addAction(self.directory_action)
+        
+        #
+        self.configure_action = QAction(QIcon.fromTheme("document-properties"), 
+                                        CONFIG["toolbar_configure"], 
+                                        self)
+        self.configure_action.setToolTip(CONFIG["toolbar_configure_tooltip"])
+        self.configure_action.triggered.connect(self.open_configure_editor)
+        self.toolbar.addAction(self.configure_action)
+        
+        #
+        self.about_action = QAction(QIcon.fromTheme("help-about"), 
+                                    CONFIG["toolbar_about"], 
+                                    self)
+        self.about_action.setToolTip(CONFIG["toolbar_about_tooltip"])
+        self.about_action.triggered.connect(self.open_about)
+        self.toolbar.addAction(self.about_action)
+        
+        # Coffee
+        self.coffee_action = QAction(   QIcon.fromTheme("emblem-favorite"), 
+                                        CONFIG["toolbar_coffee"], 
+                                        self)
+        self.coffee_action.setToolTip(CONFIG["toolbar_coffee_tooltip"])
+        self.coffee_action.triggered.connect(self.on_coffee_action_click)
+        self.toolbar.addAction(self.coffee_action)
+
+        # Conectar ao sinal de mudança de orientação
+        self.toolbar.orientationChanged.connect(self.on_update_spacer_policy)
+        self.on_update_spacer_policy()
+
+    def on_update_spacer_policy(self):
+        """Atualiza a política do espaçador baseado na orientação da toolbar"""
+        if self.toolbar.orientation() == Qt.Horizontal:
+            # Horizontal: expande na largura
+            self.toolbar_spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        else:
+            # Vertical: expande na altura
+            self.toolbar_spacer.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Expanding)
+
+    def _open_file_in_text_editor(self, filepath):
+        if os.name == 'nt':  # Windows
+            os.startfile(filepath)
+        elif os.name == 'posix':  # Linux/macOS
+            subprocess.run(['xdg-open', filepath])
+        
+    def open_configure_editor(self):
+        self._open_file_in_text_editor(CONFIG_PATH)
+
+    def open_about(self):
+        data={
+            "version": about.__version__,
+            "package": about.__package__,
+            "program_name": about.__program_name__,
+            "author": about.__author__,
+            "email": about.__email__,
+            "description": about.__description__,
+            "url_source": about.__url_source__,
+            "url_doc": about.__url_doc__,
+            "url_funding": about.__url_funding__,
+            "url_bugs": about.__url_bugs__
+        }
+        show_about_window(data,self.icon_path)
+
+    def on_coffee_action_click(self):
+        QDesktopServices.openUrl(QUrl("https://ko-fi.com/trucomanx"))
+        
+    def open_repository_directory(self):
+        self._open_directory(REPOSITORIES_DIR)
+        
+    def _open_directory(self, directory):
+        if os.name == "nt":  # Windows
+            os.startfile(directory)
+        elif sys.platform == "darwin":  # macOS
+            subprocess.run(["open", directory])
+        else:  # Linux
+            subprocess.run(["xdg-open", directory])
 
 if __name__ == "__main__":
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
+       
+    '''
+    #ensure_mime_type("npy", "application/x-npy", "NumPy array file")
+    icon_path=resource_path("icons", "logo.png")
+    extras="" # "MimeType=text/vnd.graphviz;" # "MimeType=application/x-npy;"
+    
+    create_desktop_directory()    
+    create_desktop_menu()
+    create_desktop_file(os.path.join("~",".local","share","applications"), 
+                        program_name=about.__program_name__,
+                        extras=extras,
+                        icon_path=icon_path)
+    
+    for n in range(len(sys.argv)):
+        if sys.argv[n] == "--autostart":
+            create_desktop_directory(overwrite = True)
+            create_desktop_menu(overwrite = True)
+            create_desktop_file(os.path.join("~",".config","autostart"), 
+                                overwrite=True, 
+                                program_name=about.__program_name__,
+                                extras=extras,
+                                icon_path=icon_path)
+            return
+        if sys.argv[n] == "--applications":
+            create_desktop_directory(overwrite = True)
+            create_desktop_menu(overwrite = True)
+            create_desktop_file(os.path.join("~",".local","share","applications"), 
+                                overwrite=True, 
+                                program_name=about.__program_name__,
+                                extras=extras,
+                                icon_path=icon_path)
+            return
+    '''
+    
     app = QApplication(sys.argv)
+    app.setApplicationName(about.__package__) 
+    
     window = MainWindow()
     window.show()
     sys.exit(app.exec_())

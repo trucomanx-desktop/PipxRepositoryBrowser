@@ -19,6 +19,8 @@ Execute `which pipx-repository-browser` to see where it was installed, probably 
 ### With pipx (recommended for desktop applications)
 
 ```bash
+py -m pip install --user pipx
+py -m pipx ensurepath
 pipx install pipx_repository_browser
 ```
 
