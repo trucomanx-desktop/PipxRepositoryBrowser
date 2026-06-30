@@ -686,7 +686,6 @@ class MainWindow(QMainWindow):
 if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal.SIG_DFL)
        
-    '''
     icon_path=resource_path("icons", "logo.png")
     extras="" 
     
@@ -716,7 +715,6 @@ if __name__ == "__main__":
                                 extras=extras,
                                 icon_path=icon_path)
             return
-    '''
     
     app = QApplication(sys.argv)
     app.setApplicationName(about.__package__) 

@@ -34,4 +34,4 @@ dependencies = [
 packages = ["pipx_repository_browser", "pipx_repository_browser.modules"]
 
 [tool.setuptools.package-data]
-"pipx_repository_browser" = ["icons/*.png","icons/*.svg","data/default.json"]
+"pipx_repository_browser" = ["icons/*.png","icons/*.svg", "data/*.json"]
