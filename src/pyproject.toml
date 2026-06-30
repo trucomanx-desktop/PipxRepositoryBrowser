@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pipx_repository_browser"
-version = "0.1.1"
+version = "0.1.2"
 description = "Browse curated Python package repositories and manage installations with pipx."
 readme = "README.md"
 authors = [{name = "Fernando Pujaico Rivera", email = "fernando.pujaico.rivera@gmail.com"}]

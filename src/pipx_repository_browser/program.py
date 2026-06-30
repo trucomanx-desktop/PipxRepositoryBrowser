@@ -683,7 +683,7 @@ class MainWindow(QMainWindow):
         else:  # Linux
             subprocess.run(["xdg-open", directory])
 
-def main:
+def main():
     signal.signal(signal.SIGINT, signal.SIG_DFL)
        
     icon_path=resource_path("icons", "logo.png")
