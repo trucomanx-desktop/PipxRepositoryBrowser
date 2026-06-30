@@ -2,11 +2,12 @@
 
 Browse curated Python package repositories and manage installations with pipx.
 
-![logo](screenshot.png)
+![logo](https://raw.githubusercontent.com/trucomanx-desktop/PipxRepositoryBrowser/main/screenshot.png)
 
 ## 1. Installing
 
 To install the package from [PyPI](https://pypi.org/project/pipx_repository_browser/), follow the instructions below:
+
 
 ### With pip
 
@@ -33,7 +34,7 @@ pipx-repository-browser
 ```
 ## 2. More information
 
-If you want more information go to [doc](https://github.com/trucomanx-desktop/PipxRepositoryBrowser/blob/main/doc) directory
+If you want more information go to [doc](https://github.com/trucomanx-desktop/PipxRepositoryBrowser/blob/main/doc) directory.
 
 ## 3. Buy me a coffee
 

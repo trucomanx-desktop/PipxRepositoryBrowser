@@ -1,0 +1,223 @@
+{
+    "name": "Official",
+    "author": "TrucomanX",
+    "packages": [
+        {
+            "name": "detection_dataset_annotator",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/DetectionDatasetAnnotator/refs/heads/main/src/detection_dataset_annotator/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/DetectionDatasetAnnotator/main/screenshot.png"],
+            "categories": [ "Research Dataset"],
+            "enabled": true
+        },
+        {
+            "name": "search_file_content",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/SearchFileContent/refs/heads/main/src/search_file_content/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/SearchFileContent/main/screenshot.png"],
+            "categories": [ "Developer"],
+            "enabled": true
+        },
+        {
+            "name": "simple_sticky_notes",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/SimpleStickyNotes/refs/heads/main/src/simple_sticky_notes/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/SimpleStickyNotes/main/screenshot.png"],
+            "categories": [ "Utilities"],
+            "enabled": true
+        },
+        {
+            "name": "simple_project_generator",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/SimpleProjectGenerator/refs/heads/main/src/simple_project_generator/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/SimpleProjectGenerator/main/screenshot.png"],
+            "categories": [ "Developer"],
+            "enabled": true
+        },
+        {
+            "name": "academic_contacts",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/AcademicContactsGui/refs/heads/main/src/academic_contacts/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/AcademicContactsGui/main/screenshot.png"],
+            "categories": [ "Research Writing"],
+            "enabled": true
+        },
+        {
+            "name": "kmeans_color_palette",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/KMeansColorPalette/refs/heads/main/src/kmeans_color_palette/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/KMeansColorPalette/main/screenshot.png"],
+            "categories": [ "Utilities"],
+            "enabled": true
+        },
+        {
+            "name": "list_data_tools",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/ListDataTools/refs/heads/main/src/list_data_tools/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/ListDataTools/main/screenshot.png"],
+            "categories": [ "Research Dataset"],
+            "enabled": true
+        },
+        {
+            "name": "abc_gui_editor",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/AbcGuiEditor/refs/heads/main/src/abc_gui_editor/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/AbcGuiEditor/main/screenshot.png"],
+            "categories": [ "Utilities"],
+            "enabled": true
+        },
+        {
+            "name": "classify_my_dataset",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/ClassifyMyDataset/refs/heads/main/src/classify_my_dataset/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/ClassifyMyDataset/main/screenshot.png"],
+            "categories": [ "Research Dataset"],
+            "enabled": true
+        },
+        {
+            "name": "binary_file_compare",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/BinaryFileCompare/refs/heads/main/src/binary_file_compare/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/BinaryFileCompare/main/screenshot.png"],
+            "categories": [ "Developer"],
+            "enabled": true
+        },
+        {
+            "name": "graphviz_code_viewer",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/GraphvizCodeViewer/refs/heads/main/src/graphviz_code_viewer/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/GraphvizCodeViewer/main/screenshot.png"],
+            "categories": [ "Research Writing"],
+            "enabled": true
+        },
+        {
+            "name": "silent_task_runner",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/SilentTaskRunner/refs/heads/main/src/silent_task_runner/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/SilentTaskRunner/main/screenshot.png"],
+            "categories": [ "Utilities"],
+            "enabled": true
+        },
+        {
+            "name": "multiple_desktop_clocks",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/MultipleDesktopClocks/refs/heads/main/src/multiple_desktop_clocks/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/MultipleDesktopClocks/main/screenshot.png"],
+            "categories": [ "Utilities"],
+            "enabled": true
+        },
+        {
+            "name": "multichannel_npy_viewer",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/MultichannelNpyViewer/refs/heads/main/src/multichannel_npy_viewer/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/MultichannelNpyViewer/main/screenshot.png"],
+            "categories": [ "Developer"],
+            "enabled": true
+        },
+        {
+            "name": "clipboard_text_correction",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/ClipboardTextCorrection/refs/heads/main/src/clipboard_text_correction/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/ClipboardTextCorrection/main/images/open-config-file.lin.png"],
+            "categories": [ "Research Writing"],
+            "enabled": true
+        },
+        {
+            "name": "clipboard_text_translate",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/ClipboardTextTranslate/refs/heads/main/src/clipboard_text_translate/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/ClipboardTextTranslate/main/screenshot.png"],
+            "categories": [ "Research Writing"],
+            "enabled": true
+        },
+        {
+            "name": "simple_ocrmypdf",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/SimpleOcrMyPdf/refs/heads/main/src/simple_ocrmypdf/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/SimpleOcrMyPdf/main/screenshot.png"],
+            "categories": [ "Utilities"],
+            "enabled": true
+        },
+        {
+            "name": "quiz_learning_tracker",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/QuizLearningTracker/refs/heads/main/src/quiz_learning_tracker/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/QuizLearningTracker/main/screenshot.png"],
+            "categories": [ "Utilities"],
+            "enabled": true
+        },
+        {
+            "name": "stock_viewer",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/StockViewer/refs/heads/main/src/stock_viewer/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/StockViewer/main/screenshot.png"],
+            "categories": [ "Finance"],
+            "enabled": true
+        },
+        {
+            "name": "article_introduction_generator",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/ArticleIntroductionGenerator/refs/heads/main/src/article_introduction_generator/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/ArticleIntroductionGenerator/main/screenshot.png"],
+            "categories": [ "Research Writing"],
+            "enabled": true
+        },
+        {
+            "name": "fapesp_opportunities",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/FapespOpportunities/refs/heads/main/src/fapesp_opportunities/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/FapespOpportunities/main/screenshot.png"],
+            "categories": [ "Social"],
+            "enabled": true
+        },
+        {
+            "name": "alexandria_library",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/AlexandriaLibrary/refs/heads/main/src/alexandria_library/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/AlexandriaLibrary/main/screenshot.png"],
+            "categories": [ "Research Writing"],
+            "enabled": true
+        },
+        {
+            "name": "graph_generator_assistant",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/GraphGeneratorAssistant/refs/heads/main/src/graph_generator_assistant/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/GraphGeneratorAssistant/main/screenshot.png"],
+            "categories": [ "Research Writing"],
+            "enabled": true
+        },
+        {
+            "name": "vestin",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/Vestin/refs/heads/main/src/vestin/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/Vestin/main/screenshot.png"],
+            "categories": [ "Finance"],
+            "enabled": true
+        },
+        {
+            "name": "project_snapshot_generator",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/ProjectSnapshotGenerator/refs/heads/main/src/project_snapshot_generator/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/ProjectSnapshotGenerator/main/screenshot.png"],
+            "categories": [ "Developer"],
+            "enabled": true
+        },
+        {
+            "name": "hierarchical_diagram_studio",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/HierarchicalDiagramStudio/refs/heads/main/src/hierarchical_diagram_studio/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/HierarchicalDiagramStudio/main/screenshot.png"],
+            "categories": [ "Research Writing"],
+            "enabled": true
+        },
+        {
+            "name": "academic_publication_manager",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/AcademicPublicationManager/refs/heads/main/src/academic_publication_manager/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/AcademicPublicationManager/main/screenshot.png"],
+            "categories": [ "Research Writing"],
+            "enabled": true
+        },
+        {
+            "name": "manuscript_cover_letter",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/ManuscriptCoverLetter/refs/heads/main/src/manuscript_cover_letter/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/ManuscriptCoverLetter/main/screenshot.png"],
+            "categories": [ "Research Writing"],
+            "enabled": true
+        },
+        {
+            "name": "smart_news_organizer",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/SmartNewsOrganizer/refs/heads/main/src/smart_news_organizer/icons/logo.png",
+            "screenshots": ["https://raw.githubusercontent.com/trucomanx-desktop/SmartNewsOrganizer/main/screenshot.png"],
+            "categories": [ "Social"],
+            "enabled": true
+        },
+        {
+            "name": "simple_kanban_gui",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/SimpleKanbanGUI/refs/heads/main/src/simple_kanban_gui/icons/logo.png",
+            "screenshots": [ "https://raw.githubusercontent.com/trucomanx-desktop/SimpleKanbanGUI/main/screenshot.png" ],
+            "categories": [ "Research Writing"],
+            "enabled": true
+        },
+        {
+            "name": "dataset_csv_generator",
+            "icon": "https://raw.githubusercontent.com/trucomanx-desktop/DatasetCsvGenerator/refs/heads/main/src/dataset_csv_generator/icons/logo.png",
+            "screenshots": [ "https://raw.githubusercontent.com/trucomanx-desktop/DatasetCsvGenerator/main/screenshot.png" ],
+            "categories": [ "Research Dataset"],
+            "enabled": true
+        }
+    ]
+}

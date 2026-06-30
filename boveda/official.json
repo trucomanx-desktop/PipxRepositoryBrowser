@@ -1,0 +1,15 @@
+{
+    "name": "Official",
+    "author": "TrucomanX",
+    "packages": [
+        {"name": "httpie", "categories": ["Networking", "Utilities"]},
+        {"name": "black", "categories": ["Development"]},
+        {"name": "ruff", "categories": ["Development"]},
+        {"name": "yt-dlp", "categories": ["Multimedia"]},
+        {"name": "rich", "icon": "", "categories": ["Development", "Utilities"]},
+        {"name": "poetry", "categories": ["Development"]},
+        {"name": "tldr", "categories": ["Utilities"]},
+        {"name": "btop", "categories": ["System"]},
+        {"name": "glances", "categories": ["System", "Networking"]}
+    ]
+}
