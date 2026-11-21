@@ -17,6 +17,8 @@ from pathlib import Path
 from typing import Dict, List, Optional
 from urllib.request import Request, urlopen
 
+from email.utils import parseaddr
+
 from PyQt5.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool, QUrl, pyqtSignal
 from PyQt5.QtGui import QColor, QFont, QIcon, QPixmap, QDesktopServices
 from PyQt5.QtWidgets import (
@@ -74,7 +76,7 @@ DEFAULT_CONTENT={
     "pipx_home": "",
     "status_pipx_home": "pipx home: {path}",
     "search_placeholder": "Search by name or category...",
-    "button_back": "← Back",
+    "button_back": "Back",
     "button_install": "Install",
     "button_uninstall": "Uninstall",
     "button_update": "Update",
@@ -129,6 +131,26 @@ DEFAULT_CONTENT={
 configure.verify_default_config(CONFIG_PATH,default_content=DEFAULT_CONTENT)
 
 CONFIG=configure.load_config(CONFIG_PATH)
+
+
+################################################################################
+
+def get_author(author, author_email):
+    author = (author or "").strip()
+    author_email = (author_email or "").strip()
+
+    # Caso author_email contenha "Some name <email>"
+    parsed_name, parsed_email = parseaddr(author_email)
+
+    # Prioriza o author explícito; se estiver vazio, usa o nome extraído
+    author = author or parsed_name
+
+    # Prioriza o email extraído; se não existir, mantém o valor original
+    author_email = parsed_email or author_email
+
+    return author, author_email
+
+################################################################################
 
 def _read_bashrc_pipx_home() -> str:
     """Read PIPX_HOME from an interactive Bash startup, once at app startup."""
@@ -505,12 +527,19 @@ class MainWindow(QMainWindow):
         page = QWidget()
         layout = QVBoxLayout(page)
         toolbar = QHBoxLayout()
+        
         self.back_button = QPushButton(CONFIG["button_back"])
+        self.back_button.setIcon(QIcon(resource_path("icons", "arrow-left-svgrepo-com.svg")))
         self.back_button.clicked.connect(lambda: self.stack.setCurrentWidget(self.list_page))
+        
         self.install_button = QPushButton(CONFIG["button_install"])
+        self.install_button.setIcon(QIcon(resource_path("icons", "button_add_green.svg")))
         self.install_button.clicked.connect(self.install_or_uninstall)
+        
         self.update_button = QPushButton(CONFIG["button_update"])
+        self.update_button.setIcon(QIcon(resource_path("icons", "arrow-cw-svgrepo-com.svg")))
         self.update_button.clicked.connect(lambda: self.run_pipx("upgrade"))
+        
         toolbar.addWidget(self.back_button)
         toolbar.addStretch()
         toolbar.addWidget(self.install_button)
@@ -648,13 +677,16 @@ class MainWindow(QMainWindow):
         # Home page
         home_page = info.get("home_page") or info.get("package_url") or  ""
         
+        
+        author, author_email = get_author(info.get('author'), info.get('author_email'))
+        
         self.summary_metadata.setText(
             f"<p><b>{CONFIG['label_summary']}:</b> {info.get('summary') or CONFIG['metadata_value_unavailable']}</p>"
             f"<p><b>{CONFIG['label_version']}:</b> {info.get('version') or CONFIG['metadata_value_unavailable']}</p>"
         )
         self.metadata.setText(
-            f"<p><b>{CONFIG['label_author']}:</b> {info.get('author') or CONFIG['metadata_value_unavailable']}</p>"
-            f"<p><b>{CONFIG['label_email']}:</b> {html.escape(info.get('author_email') or '') or CONFIG['metadata_value_unavailable']}</p>"
+            f"<p><b>{CONFIG['label_author']}:</b> {author or CONFIG['metadata_value_unavailable']}</p>"
+            f"<p><b>{CONFIG['label_email']}:</b> {author_email or CONFIG['metadata_value_unavailable']}</p>"
             f"<p><b>{CONFIG['label_license']}:</b> {info.get('license') or CONFIG['metadata_value_unavailable']}</p>"
             f"<p><b>{CONFIG['label_homepage']}:</b> <a href='{home_page or '#'}'>{home_page or CONFIG['metadata_value_unavailable']}</a></p>"
             f"<p><b>{CONFIG['label_project_urls']}:</b><br>{urls}</p>"
@@ -670,6 +702,7 @@ class MainWindow(QMainWindow):
         self.summary_metadata.setOpenExternalLinks(True)
         self.metadata.setOpenExternalLinks(True)
         self.install_button.setText(CONFIG["button_uninstall"] if installed_data else CONFIG["button_install"])
+        self.install_button.setIcon(QIcon(resource_path("icons", "button_remove_red.svg")) if installed_data else QIcon(resource_path("icons", "button_add_green.svg")))
         self.update_button.setEnabled(bool(installed_data))
 
     def show_screenshot(self) -> None:

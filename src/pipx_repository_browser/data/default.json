@@ -42,7 +42,6 @@
                 "https://raw.githubusercontent.com/trucomanx-desktop/SimpleStickyNotes/main/screenshot.png"
             ],
             "categories": [
-                "Utilities",
                 "Desktop Background"
             ],
             "enabled": true
@@ -76,7 +75,6 @@
                 "https://raw.githubusercontent.com/trucomanx-desktop/KMeansColorPalette/main/screenshot.png"
             ],
             "categories": [
-                "Utilities",
                 "Graphics"
             ],
             "enabled": true
@@ -166,7 +164,7 @@
                 "https://raw.githubusercontent.com/trucomanx-desktop/MultipleDesktopClocks/main/screenshot.png"
             ],
             "categories": [
-                "Utilities",
+                "Productivity",
                 "Desktop Background"
             ],
             "enabled": true
@@ -336,7 +334,7 @@
                 "https://raw.githubusercontent.com/trucomanx-desktop/HierarchicalDiagramStudio/main/screenshot.png"
             ],
             "categories": [
-                "Research Writing"
+                "Productivity"
             ],
             "enabled": true
         },
@@ -380,7 +378,7 @@
                 "https://raw.githubusercontent.com/trucomanx-desktop/SimpleKanbanGUI/main/screenshot.png"
             ],
             "categories": [
-                "Research Writing"
+                "Productivity"
             ],
             "enabled": true
         },
