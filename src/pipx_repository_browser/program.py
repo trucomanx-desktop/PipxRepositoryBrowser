@@ -5,6 +5,7 @@
 
 from __future__ import annotations
 
+import html
 import json
 import os
 import subprocess
@@ -60,6 +61,8 @@ CONFIG_PATH = os.path.join( os.path.expanduser("~"),
 DEFAULT_CONTENT={   
     "toolbar_directory": "Directory",
     "toolbar_directory_tooltip": "Open the repository directory",
+    "toolbar_refresh": "Refresh",
+    "toolbar_refresh_tooltip": "Reload repository and package data",
     "toolbar_configure": "Configure",
     "toolbar_configure_tooltip": "Open the configure Json file of program GUI",
     "toolbar_about": "About",
@@ -68,6 +71,8 @@ DEFAULT_CONTENT={
     "toolbar_coffee_tooltip": "Buy me a coffee (TrucomanX)",
     "window_width": 1024,
     "window_height": 800,
+    "pkg_screenshot_size": 800,
+    "pkg_icon_size": 80,
     "default_icon_size": 64
 }
 
@@ -436,6 +441,7 @@ class MainWindow(QMainWindow):
         return page
 
     def load_repositories(self) -> None:
+        self.refresh_action.setEnabled(False)
         self.progress.setVisible(True)
         self.progress.setRange(0, 1)
         worker = RepositoryLoader(Path(REPOSITORIES_DIR))
@@ -447,6 +453,7 @@ class MainWindow(QMainWindow):
         self.packages = packages
         self.installed = installed
         self.progress.setVisible(False)
+        self.refresh_action.setEnabled(True)
         self.populate_packages()
 
     def installed_package(self, package_name: str) -> dict:
@@ -501,32 +508,50 @@ class MainWindow(QMainWindow):
 
     def on_package_info_loaded(self, package: RepositoryPackage, data: dict, icon: bytes, screenshots: list) -> None:
         info = data.get("info", {}) if data else {}
-        project_urls = info.get("project_urls") or {}
+        #print(info)
+        
+        # Name
         name = info.get("name") or package.name
         self.title.setText(name)
-        self.detail_icon.setPixmap(pixmap_from_data(icon, 80))
+        self.detail_icon.setPixmap(pixmap_from_data(icon, CONFIG["pkg_icon_size"]))
+        
+        # Screenshots
         self.screenshots = []
         for image in screenshots:
             if not image:
                 continue
-            pixmap = pixmap_from_data(image, 760)
+            pixmap = pixmap_from_data(image, CONFIG["pkg_screenshot_size"])
             if not pixmap.isNull():
                 self.screenshots.append(pixmap)
         self.screenshot_index = 0
         self.show_screenshot()
+        
+        # Installed?
         installed_data = self.installed_package(package.name)
         installed_text = f"installed + version: {installed_data.get('version', '') or installed_version(package.name) or 'unknown'}" if installed_data else "not installed"
+        
+        # project urls
+        project_urls = info.get("project_urls") or {}
         urls = "<br>".join(f"&nbsp;&nbsp;{key}: <a href='{value}'>{value}</a>" for key, value in project_urls.items()) or "-"
+        
+        # Downloads
+        project_downs = info.get("downloads") or {}
+        downs = "; ".join(f"&nbsp;&nbsp;{key}: {value}" for key, value in project_downs.items()) or "-"
+        
+        # Home page
+        home_page = info.get("home_page") or info.get("package_url") or  ""
+        
         self.summary_metadata.setText(
             f"<p><b>Summary:</b> {info.get('summary') or '-'}</p>"
             f"<p><b>Version:</b> {info.get('version') or '-'}</p>"
         )
         self.metadata.setText(
             f"<p><b>Author:</b> {info.get('author') or '-'}</p>"
-            f"<p><b>email:</b> {info.get('author_email') or '-'}</p>"
+            f"<p><b>email:</b> {html.escape(info.get('author_email')) or '-'}</p>"
             f"<p><b>Licença:</b> {info.get('license') or '-'}</p>"
-            f"<p><b>homepage:</b> <a href='{info.get('home_page') or '#'}'>{info.get('home_page') or '-'}</a></p>"
+            f"<p><b>homepage:</b> <a href='{home_page or '#'}'>{home_page or '-'}</a></p>"
             f"<p><b>project_urls:</b><br>{urls}</p>"
+            #f"<p><b>project_downs:</b><br>{downs}</p>"
             f"<p><b>{installed_text}</b></p>"
         )
         self.summary_metadata.setOpenExternalLinks(True)
@@ -593,11 +618,7 @@ class MainWindow(QMainWindow):
         self.toolbar = self.addToolBar("Main")
         self.toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
 
-        # Adicionar o espaçador
-        self.toolbar_spacer = QWidget()
-        self.toolbar_spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        self.toolbar.addWidget(self.toolbar_spacer)
-        
+
         #
         self.directory_action = QAction(
             QIcon(resource_path("icons", "folder-drag-accept.png")),
@@ -607,6 +628,24 @@ class MainWindow(QMainWindow):
         self.directory_action.setToolTip(CONFIG["toolbar_directory_tooltip"])
         self.directory_action.triggered.connect(self.open_repository_directory)
         self.toolbar.addAction(self.directory_action)
+
+        # Refresh repository and package metadata
+        self.refresh_action = QAction(
+            QIcon(resource_path("icons", "arrow-cw-svgrepo-com.svg")),
+            CONFIG["toolbar_refresh"], 
+            self
+        )
+        self.refresh_action.setToolTip(CONFIG["toolbar_refresh_tooltip"])
+        self.refresh_action.triggered.connect(self.load_repositories)
+        self.toolbar.addAction(self.refresh_action)
+        
+
+        # Adicionar o espaçador
+        self.toolbar_spacer = QWidget()
+        self.toolbar_spacer.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.toolbar.addWidget(self.toolbar_spacer)
+        
+
         
         #
         self.configure_action = QAction(QIcon(resource_path("icons", "text-configure.png")),
