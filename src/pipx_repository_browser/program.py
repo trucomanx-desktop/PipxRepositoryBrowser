@@ -78,6 +78,9 @@ DEFAULT_CONTENT={
     "status_pipx_home": "pipx home: {path}",
     "status_category_saved": "Moved {package} to {category}",
     "error_save_category": "Could not save category change: {error}",
+    "label_launch_apps": "Launch applications",
+    "launch_app_tooltip": "Launch {app}",
+    "error_launch_app": "Could not launch {app}: {error}",
     "search_placeholder": "Search by name or category...",
     "button_back": "Back",
     "button_install": "Install",
@@ -269,6 +272,12 @@ def normalize_package_name(package_name: str) -> str:
     return package_name.replace("_", "-").lower()
 
 
+def pipx_path_value(value) -> str:
+    if isinstance(value, dict) and value.get("__type__") == "Path":
+        return str(value.get("__Path__") or "")
+    return str(value) if isinstance(value, str) else ""
+
+
 def load_pipx_installed_packages() -> dict:
     try:
         completed = subprocess.run(
@@ -289,10 +298,18 @@ def load_pipx_installed_packages() -> dict:
         main_package = metadata.get("main_package", {}) if isinstance(metadata, dict) else {}
         package_name = main_package.get("package") or venv_name
         normalized_name = normalize_package_name(package_name)
+        app_names = main_package.get("apps", []) or []
+        app_paths = main_package.get("app_paths", []) or []
+        executable_paths = {
+            name: path
+            for name, raw_path in zip(app_names, app_paths)
+            if (path := pipx_path_value(raw_path))
+        }
         installed[normalized_name] = {
             "name": package_name,
             "version": main_package.get("package_version", ""),
-            "executables": sorted(main_package.get("apps", []) or []),
+            "executables": sorted(app_names),
+            "executable_paths": executable_paths,
         }
     return installed
 
@@ -593,6 +610,25 @@ class MainWindow(QMainWindow):
         self.metadata = QLabel()
         self.metadata.setTextFormat(Qt.RichText)
         self.metadata.setWordWrap(True)
+
+        self.launch_apps_section = QWidget()
+        launch_section_layout = QVBoxLayout(self.launch_apps_section)
+        launch_section_layout.setContentsMargins(0, 0, 0, 0)
+        self.launch_apps_title = QLabel("<b>"+CONFIG["label_launch_apps"]+":</b>")
+        self.launch_apps_container = QWidget()
+        self.launch_apps_layout = QHBoxLayout(self.launch_apps_container)
+        self.launch_apps_layout.setContentsMargins(0, 0, 0, 0)
+        self.launch_apps_layout.setSpacing(6)
+        self.launch_apps_scroll = QScrollArea()
+        self.launch_apps_scroll.setWidgetResizable(True)
+        self.launch_apps_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.launch_apps_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.launch_apps_scroll.setFixedHeight(52)
+        self.launch_apps_scroll.setWidget(self.launch_apps_container)
+        launch_section_layout.addWidget(self.launch_apps_title)
+        launch_section_layout.addWidget(self.launch_apps_scroll)
+        self.launch_apps_section.setVisible(False)
+
         self.screenshot_label = QLabel(alignment=Qt.AlignCenter)
         self.screenshot_label.setMinimumHeight(260)
         shot_buttons = QHBoxLayout()
@@ -602,13 +638,17 @@ class MainWindow(QMainWindow):
         next_button.setToolTip(CONFIG["screenshot_next_tooltip"])
         previous_button.clicked.connect(lambda: self.change_screenshot(-1))
         next_button.clicked.connect(lambda: self.change_screenshot(1))
-        shot_buttons.addStretch(); shot_buttons.addWidget(previous_button); shot_buttons.addWidget(next_button); shot_buttons.addStretch()
+        shot_buttons.addStretch(); 
+        shot_buttons.addWidget(previous_button); 
+        shot_buttons.addWidget(next_button); 
+        shot_buttons.addStretch()
         layout.addLayout(toolbar)
         layout.addLayout(header)
         layout.addWidget(self.summary_metadata)
         layout.addWidget(self.screenshot_label)
         layout.addLayout(shot_buttons)
         layout.addWidget(self.metadata)
+        layout.addWidget(self.launch_apps_section)
         layout.addStretch()
         return page
 
@@ -781,6 +821,50 @@ class MainWindow(QMainWindow):
         self.install_button.setText(CONFIG["button_uninstall"] if installed_data else CONFIG["button_install"])
         self.install_button.setIcon(QIcon(resource_path("icons", "button_remove_red.svg")) if installed_data else QIcon(resource_path("icons", "button_add_green.svg")))
         self.update_button.setEnabled(bool(installed_data))
+        self.populate_launch_apps(installed_data)
+
+    def populate_launch_apps(self, installed_data: dict) -> None:
+        while self.launch_apps_layout.count():
+            item = self.launch_apps_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        executable_paths = installed_data.get("executable_paths", {})
+        for app_name in installed_data.get("executables", []):
+            app_path = executable_paths.get(app_name) or shutil.which(
+                app_name, path=PIPX_SUBPROCESS_ENV.get("PATH", "")
+            )
+            if not app_path:
+                continue
+            button = QPushButton(app_name)
+            button.setIcon(QIcon(resource_path("icons", "system-run.svg")))
+            button.setToolTip(CONFIG["launch_app_tooltip"].format(app=app_name))
+            button.clicked.connect(
+                lambda checked=False, name=app_name, path=app_path:
+                    self.launch_pipx_app(name, path)
+            )
+            self.launch_apps_layout.addWidget(button)
+
+        has_launchable_apps = self.launch_apps_layout.count() > 0
+        if has_launchable_apps:
+            self.launch_apps_layout.insertStretch(0, 1)
+            self.launch_apps_layout.addStretch(1)
+        self.launch_apps_section.setVisible(has_launchable_apps)
+
+    def launch_pipx_app(self, app_name: str, app_path: str) -> None:
+        try:
+            subprocess.Popen(
+                [str(app_path)],
+                env=PIPX_SUBPROCESS_ENV,
+                stdin=subprocess.DEVNULL,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+        except Exception as exc:
+            self.statusBar().showMessage(
+                CONFIG["error_launch_app"].format(app=app_name, error=exc), 10000
+            )
 
     def show_screenshot(self) -> None:
         if not self.screenshots:
