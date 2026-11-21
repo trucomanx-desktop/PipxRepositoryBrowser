@@ -23,6 +23,7 @@ from PyQt5.QtCore import QObject, QRunnable, QSize, Qt, QThreadPool, QUrl, pyqtS
 from PyQt5.QtGui import QColor, QFont, QIcon, QPixmap, QDesktopServices
 from PyQt5.QtWidgets import (
     QApplication,
+    QAbstractItemView,
     QDialog,
     QDialogButtonBox,
     QHBoxLayout,
@@ -75,6 +76,8 @@ DEFAULT_CONTENT={
     "toolbar_name": "Main",
     "pipx_home": "",
     "status_pipx_home": "pipx home: {path}",
+    "status_category_saved": "Moved {package} to {category}",
+    "error_save_category": "Could not save category change: {error}",
     "search_placeholder": "Search by name or category...",
     "button_back": "Back",
     "button_install": "Install",
@@ -334,6 +337,7 @@ class RepositoryPackage:
     categories: List[str] = field(default_factory=lambda: [CONFIG["category_default"]])
     enabled: bool = True
     repository: str = ""
+    source_file: str = ""
     icon_data: bytes = b""
     screenshot_data: List[bytes] = field(default_factory=list)
     pypi_data: dict = field(default_factory=dict)
@@ -383,6 +387,7 @@ class RepositoryLoader(QRunnable):
                         categories=categories or [CONFIG["category_default"]],
                         enabled=item.get("enabled", True),
                         repository=repo_name,
+                        source_file=str(file_path),
                     )
                 )
 
@@ -427,6 +432,37 @@ class PipxCommand(QRunnable):
             self.signals.command_finished.emit(self.package_name, False, str(exc))
 
 
+class CategoryListWidget(QListWidget):
+    package_dropped = pyqtSignal(object, str, str)
+
+    def __init__(self, category: str):
+        super().__init__()
+        self.category = category
+        self.setDragEnabled(True)
+        self.setAcceptDrops(True)
+        self.setDropIndicatorShown(True)
+        self.setDragDropMode(QAbstractItemView.DragDrop)
+        self.setDefaultDropAction(Qt.MoveAction)
+
+    def dropEvent(self, event) -> None:
+        source = event.source()
+        if not isinstance(source, CategoryListWidget) or source is self:
+            event.ignore()
+            return
+
+        item = source.currentItem()
+        package = item.data(Qt.UserRole) if item else None
+        if package is None or self.category in package.categories:
+            event.ignore()
+            return
+
+        self.package_dropped.emit(package, source.category, self.category)
+        # The handler updates the repository and rebuilds the lists itself.
+        # CopyAction prevents Qt from also deleting the item from its source list.
+        event.setDropAction(Qt.CopyAction)
+        event.accept()
+
+
 class CategorySection(QWidget):
     def __init__(self, category: str):
         super().__init__()
@@ -434,7 +470,7 @@ class CategorySection(QWidget):
         self.button = QToolButton(text=CONFIG["category_expanded"].format(category=category), checkable=True, checked=True)
         self.button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.button.clicked.connect(self.toggle)
-        self.list_widget = QListWidget()
+        self.list_widget = CategoryListWidget(category)
         self.list_widget.setViewMode(QListWidget.IconMode)
         self.list_widget.setIconSize(QSize(CONFIG["default_icon_size"], CONFIG["default_icon_size"]))
         self.list_widget.setGridSize(QSize(128, 108))
@@ -592,6 +628,46 @@ class MainWindow(QMainWindow):
         self.refresh_action.setEnabled(True)
         self.populate_packages()
 
+    def move_package_to_category(
+        self, package: RepositoryPackage, source_category: str, destination_category: str
+    ) -> None:
+        if source_category not in package.categories or destination_category in package.categories:
+            return
+
+        updated_categories = [
+            destination_category if category == source_category else category
+            for category in package.categories
+        ]
+
+        source_file = Path(package.source_file)
+        try:
+            repository_data = json.loads(source_file.read_text(encoding="utf-8"))
+            source_item = next(
+                item for item in repository_data.get("packages", [])
+                if item.get("name") == package.name
+            )
+            source_item["categories"] = updated_categories
+            temporary_file = source_file.with_name(source_file.name + ".tmp")
+            temporary_file.write_text(
+                json.dumps(repository_data, ensure_ascii=False, indent=4) + "\n",
+                encoding="utf-8",
+            )
+            os.replace(temporary_file, source_file)
+        except Exception as exc:
+            self.statusBar().showMessage(
+                CONFIG["error_save_category"].format(error=exc), 10000
+            )
+            return
+
+        package.categories = updated_categories
+        self.populate_packages()
+        self.statusBar().showMessage(
+            CONFIG["status_category_saved"].format(
+                package=package.name, category=destination_category
+            ),
+            5000,
+        )
+
     def installed_package(self, package_name: str) -> dict:
         return self.installed.get(normalize_package_name(package_name), {})
 
@@ -616,6 +692,7 @@ class MainWindow(QMainWindow):
         for category in sorted(packages_by_category, key=str.lower):
             section = CategorySection(category)
             section.list_widget.itemClicked.connect(self.open_package)
+            section.list_widget.package_dropped.connect(self.move_package_to_category)
             self.sections[category] = section
             self.category_layout.insertWidget(self.category_layout.count() - 1, section)
 
