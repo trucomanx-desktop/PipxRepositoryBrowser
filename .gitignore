@@ -1,2 +1,4 @@
 /src/pipx_repository_browser/modules/__pycache__/
 /src/pipx_repository_browser/__pycache__/
+/src/dist
+/src/pipx_repository_browser.egg-info/

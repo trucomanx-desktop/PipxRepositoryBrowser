@@ -11,6 +11,7 @@ import os
 import subprocess
 import sys
 import signal
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -64,11 +65,60 @@ DEFAULT_CONTENT={
     "toolbar_refresh": "Refresh",
     "toolbar_refresh_tooltip": "Reload repository and package data",
     "toolbar_configure": "Configure",
-    "toolbar_configure_tooltip": "Open the configure Json file of program GUI",
+    "toolbar_configure_tooltip": "Open the program GUI configuration JSON file",
     "toolbar_about": "About",
     "toolbar_about_tooltip": "About the program",
     "toolbar_coffee": "Coffee",
     "toolbar_coffee_tooltip": "Buy me a coffee (TrucomanX)",
+    "toolbar_name": "Main",
+    "pipx_home": "",
+    "status_pipx_home": "pipx home: {path}",
+    "search_placeholder": "Search by name or category...",
+    "button_back": "← Back",
+    "button_install": "Install",
+    "button_uninstall": "Uninstall",
+    "button_update": "Update",
+    "button_previous_screenshot": "‹",
+    "button_next_screenshot": "›",
+    "screenshot_previous_tooltip": "Previous screenshot",
+    "screenshot_next_tooltip": "Next screenshot",
+    "category_default": "Any",
+    "category_expanded": "▾  {category}",
+    "category_collapsed": "▸  {category}",
+    "package_summary_unavailable": "No summary available",
+    "package_tooltip": "{summary}",
+    "package_installed_tooltip": "{summary}\n\nInstalled",
+    "package_installed_marker": "✓ {name}",
+    "progress_reading_repository": "Reading {repository}",
+    "progress_loading_package_data": "Loading package data for {package}",
+    "text_loading_metadata": "Loading metadata...",
+    "text_no_screenshots": "No screenshots available",
+    "text_installed_version": "Installed · version: {version}",
+    "text_installed_version_unknown": "Unknown",
+    "text_not_installed": "Not installed",
+    "label_summary": "Summary",
+    "label_version": "Version",
+    "label_author": "Author",
+    "label_email": "Email",
+    "label_license": "License",
+    "label_homepage": "Homepage",
+    "label_project_urls": "Project URLs",
+    "metadata_value_unavailable": "—",
+    "dialog_pipx_title": "pipx output",
+    "dialog_pipx_error_title": "pipx error",
+    "dialog_error_message": "Error: {message}",
+    "command_success_fallback": "OK",
+    "about_title": "About",
+    "about_package": "Package",
+    "about_program": "Program",
+    "about_version": "Version",
+    "about_author": "Author",
+    "about_email": "Email",
+    "about_source": "Source",
+    "about_documentation": "Documentation",
+    "about_funding": "Funding",
+    "about_bugs": "Bugs",
+    "button_ok": "OK",
     "window_width": 1024,
     "window_height": 800,
     "pkg_screenshot_size": 800,
@@ -79,6 +129,59 @@ DEFAULT_CONTENT={
 configure.verify_default_config(CONFIG_PATH,default_content=DEFAULT_CONTENT)
 
 CONFIG=configure.load_config(CONFIG_PATH)
+
+def _read_bashrc_pipx_home() -> str:
+    """Read PIPX_HOME from an interactive Bash startup, once at app startup."""
+    bashrc = Path.home() / ".bashrc"
+    if not bashrc.is_file() or not shutil.which("bash"):
+        return ""
+
+    marker = "__PIPX_REPOSITORY_BROWSER_PIPX_HOME__="
+    command = f'printf "\\n{marker}%s\\n" "${{PIPX_HOME-}}"'
+    try:
+        completed = subprocess.run(
+            ["bash", "--noprofile", "-ic", command],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            env=os.environ.copy(),
+        )
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+    for line in reversed(completed.stdout.splitlines()):
+        if line.startswith(marker):
+            return line[len(marker):].strip()
+    return ""
+
+def _resolve_pipx_environment() -> tuple[dict, str]:
+    """Resolve pipx's home once and pass it to every pipx subprocess."""
+    pipx_env = os.environ.copy()
+    configured_home = str(CONFIG.get("pipx_home", "") or "").strip()
+    pipx_home = os.path.expandvars(os.path.expanduser(configured_home)) if configured_home else ""
+    pipx_home = pipx_home or pipx_env.get("PIPX_HOME", "").strip() or _read_bashrc_pipx_home()
+
+    if pipx_home:
+        pipx_home = os.path.expandvars(os.path.expanduser(pipx_home))
+    else:
+        try:
+            completed = subprocess.run(
+                ["pipx", "environment", "--value", "PIPX_HOME"],
+                check=True,
+                text=True,
+                capture_output=True,
+                timeout=10,
+                env=pipx_env,
+            )
+            pipx_home = completed.stdout.strip()
+        except (OSError, subprocess.SubprocessError):
+            pipx_home = str(Path.home() / ".local" / "share" / "pipx")
+
+    pipx_home = os.path.expandvars(os.path.expanduser(pipx_home))
+    pipx_env["PIPX_HOME"] = pipx_home
+    return pipx_env, pipx_home
+
+PIPX_SUBPROCESS_ENV, PIPX_HOME = _resolve_pipx_environment()
 
 # ---------------------------------------
 REPOSITORIES_DIR = os.path.join( os.path.expanduser("~"),
@@ -149,6 +252,7 @@ def load_pipx_installed_packages() -> dict:
             text=True,
             capture_output=True,
             timeout=20,
+            env=PIPX_SUBPROCESS_ENV,
         )
         data = json.loads(completed.stdout or "{}")
     except Exception:
@@ -205,7 +309,7 @@ class RepositoryPackage:
     name: str
     icon: str = ""
     screenshots: List[str] = field(default_factory=list)
-    categories: List[str] = field(default_factory=lambda: ["Any"])
+    categories: List[str] = field(default_factory=lambda: [CONFIG["category_default"]])
     enabled: bool = True
     repository: str = ""
     icon_data: bytes = b""
@@ -214,7 +318,7 @@ class RepositoryPackage:
 
     def summary(self) -> str:
         info = self.pypi_data.get("info", {}) if self.pypi_data else {}
-        return info.get("summary") or "Sem summary disponível"
+        return info.get("summary") or CONFIG["package_summary_unavailable"]
 
 
 class WorkerSignals(QObject):
@@ -237,7 +341,7 @@ class RepositoryLoader(QRunnable):
         save_installed_packages(installed)
         repository_total = max(len(files), 1)
         for index, file_path in enumerate(files, start=1):
-            self.signals.progress.emit(index, repository_total, f"Lendo {file_path.name}")
+            self.signals.progress.emit(index, repository_total, CONFIG["progress_reading_repository"].format(repository=file_path.name))
             try:
                 repository = json.loads(file_path.read_text(encoding="utf-8"))
             except Exception:
@@ -246,7 +350,7 @@ class RepositoryLoader(QRunnable):
             for item in repository.get("packages", []):
                 if not item.get("name") or item.get("enabled", True) is False:
                     continue
-                categories = item.get("categories") or ["Any"]
+                categories = item.get("categories") or [CONFIG["category_default"]]
                 if isinstance(categories, str):
                     categories = [categories]
                 packages.append(
@@ -254,7 +358,7 @@ class RepositoryLoader(QRunnable):
                         name=item["name"],
                         icon=item.get("icon", ""),
                         screenshots=item.get("screenshots", []) or [],
-                        categories=categories or ["Any"],
+                        categories=categories or [CONFIG["category_default"]],
                         enabled=item.get("enabled", True),
                         repository=repo_name,
                     )
@@ -262,7 +366,7 @@ class RepositoryLoader(QRunnable):
 
         asset_total = max(len(packages), 1)
         for index, package in enumerate(packages, start=1):
-            self.signals.progress.emit(index, asset_total, f"Baixando dados de {package.name}")
+            self.signals.progress.emit(index, asset_total, CONFIG["progress_loading_package_data"].format(package=package.name))
             package.pypi_data = fetch_json(f"https://pypi.org/pypi/{package.name}/json")
             package.icon_data = fetch_image_data(package.icon)
             package.screenshot_data = [fetch_image_data(url) for url in package.screenshots]
@@ -292,8 +396,8 @@ class PipxCommand(QRunnable):
     def run(self) -> None:
         command = ["pipx", self.action, self.package_name]
         try:
-            completed = subprocess.run(command, check=True, text=True, capture_output=True)
-            message = completed.stdout or completed.stderr or "OK"
+            completed = subprocess.run(command, check=True, text=True, capture_output=True, env=PIPX_SUBPROCESS_ENV)
+            message = completed.stdout or completed.stderr or CONFIG["command_success_fallback"]
             installed = load_pipx_installed_packages()
             save_installed_packages(installed)
             self.signals.command_finished.emit(self.package_name, True, message)
@@ -305,7 +409,7 @@ class CategorySection(QWidget):
     def __init__(self, category: str):
         super().__init__()
         self.category = category
-        self.button = QToolButton(text=f"▾  {category}", checkable=True, checked=True)
+        self.button = QToolButton(text=CONFIG["category_expanded"].format(category=category), checkable=True, checked=True)
         self.button.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.button.clicked.connect(self.toggle)
         self.list_widget = QListWidget()
@@ -324,7 +428,7 @@ class CategorySection(QWidget):
 
     def toggle(self) -> None:
         expanded = self.button.isChecked()
-        self.button.setText(("▾  " if expanded else "▸  ") + self.category)
+        self.button.setText((CONFIG["category_expanded"] if expanded else CONFIG["category_collapsed"]).format(category=self.category))
         self.list_widget.setVisible(expanded)
         if expanded:
             self.adjust_height()
@@ -370,12 +474,13 @@ class MainWindow(QMainWindow):
 
         self._create_toolbar()
         self._build_ui()
+        self.statusBar().showMessage(CONFIG["status_pipx_home"].format(path=PIPX_HOME))
         self.load_repositories()
 
     def _build_ui(self) -> None:
         root = QWidget()
         main = QVBoxLayout(root)
-        self.search = QLineEdit(placeholderText="Buscar por nome ou categoria...")
+        self.search = QLineEdit(placeholderText=CONFIG["search_placeholder"])
         self.search.textChanged.connect(self.populate_packages)
         self.progress = QProgressBar()
         self.progress.setVisible(False)
@@ -400,11 +505,11 @@ class MainWindow(QMainWindow):
         page = QWidget()
         layout = QVBoxLayout(page)
         toolbar = QHBoxLayout()
-        self.back_button = QPushButton("← Voltar")
+        self.back_button = QPushButton(CONFIG["button_back"])
         self.back_button.clicked.connect(lambda: self.stack.setCurrentWidget(self.list_page))
-        self.install_button = QPushButton("Install")
+        self.install_button = QPushButton(CONFIG["button_install"])
         self.install_button.clicked.connect(self.install_or_uninstall)
-        self.update_button = QPushButton("Update")
+        self.update_button = QPushButton(CONFIG["button_update"])
         self.update_button.clicked.connect(lambda: self.run_pipx("upgrade"))
         toolbar.addWidget(self.back_button)
         toolbar.addStretch()
@@ -426,8 +531,10 @@ class MainWindow(QMainWindow):
         self.screenshot_label = QLabel(alignment=Qt.AlignCenter)
         self.screenshot_label.setMinimumHeight(260)
         shot_buttons = QHBoxLayout()
-        previous_button = QPushButton("‹")
-        next_button = QPushButton("›")
+        previous_button = QPushButton(CONFIG["button_previous_screenshot"])
+        previous_button.setToolTip(CONFIG["screenshot_previous_tooltip"])
+        next_button = QPushButton(CONFIG["button_next_screenshot"])
+        next_button.setToolTip(CONFIG["screenshot_next_tooltip"])
         previous_button.clicked.connect(lambda: self.change_screenshot(-1))
         next_button.clicked.connect(lambda: self.change_screenshot(1))
         shot_buttons.addStretch(); shot_buttons.addWidget(previous_button); shot_buttons.addWidget(next_button); shot_buttons.addStretch()
@@ -486,11 +593,11 @@ class MainWindow(QMainWindow):
             for package in sorted(packages_by_category[category], key=lambda p: p.name.lower()):
                 item = QListWidgetItem(QIcon(pixmap_from_data(package.icon_data)), package.name)
                 item.setData(Qt.UserRole, package)
-                item.setToolTip(package.summary())
+                item.setToolTip(CONFIG["package_tooltip"].format(summary=package.summary()))
                 if self.is_installed(package.name):
-                    item.setText(f"✓ {package.name}")
+                    item.setText(CONFIG["package_installed_marker"].format(name=package.name))
                     item.setBackground(QColor("#dff7e8"))
-                    item.setToolTip(f"{package.summary()}\n\nInstalado")
+                    item.setToolTip(CONFIG["package_installed_tooltip"].format(summary=package.summary()))
                 section.list_widget.addItem(item)
             section.adjust_height()
 
@@ -499,7 +606,7 @@ class MainWindow(QMainWindow):
         self.current_package = package
         self.stack.setCurrentWidget(self.detail_page)
         self.title.setText(package.name)
-        self.summary_metadata.setText("Carregando metadados...")
+        self.summary_metadata.setText(CONFIG["text_loading_metadata"])
         self.metadata.clear()
         self.screenshot_label.clear()
         worker = PackageInfoLoader(package)
@@ -528,11 +635,11 @@ class MainWindow(QMainWindow):
         
         # Installed?
         installed_data = self.installed_package(package.name)
-        installed_text = f"installed + version: {installed_data.get('version', '') or installed_version(package.name) or 'unknown'}" if installed_data else "not installed"
+        installed_text = CONFIG["text_installed_version"].format(version=installed_data.get('version') or installed_version(package.name) or CONFIG["text_installed_version_unknown"]) if installed_data else CONFIG["text_not_installed"]
         
         # project urls
         project_urls = info.get("project_urls") or {}
-        urls = "<br>".join(f"&nbsp;&nbsp;{key}: <a href='{value}'>{value}</a>" for key, value in project_urls.items()) or "-"
+        urls = "<br>".join(f"&nbsp;&nbsp;{key}: <a href='{value}'>{value}</a>" for key, value in project_urls.items()) or CONFIG["metadata_value_unavailable"]
         
         # Downloads
         project_downs = info.get("downloads") or {}
@@ -542,27 +649,33 @@ class MainWindow(QMainWindow):
         home_page = info.get("home_page") or info.get("package_url") or  ""
         
         self.summary_metadata.setText(
-            f"<p><b>Summary:</b> {info.get('summary') or '-'}</p>"
-            f"<p><b>Version:</b> {info.get('version') or '-'}</p>"
+            f"<p><b>{CONFIG['label_summary']}:</b> {info.get('summary') or CONFIG['metadata_value_unavailable']}</p>"
+            f"<p><b>{CONFIG['label_version']}:</b> {info.get('version') or CONFIG['metadata_value_unavailable']}</p>"
         )
         self.metadata.setText(
-            f"<p><b>Author:</b> {info.get('author') or '-'}</p>"
-            f"<p><b>email:</b> {html.escape(info.get('author_email')) or '-'}</p>"
-            f"<p><b>Licença:</b> {info.get('license') or '-'}</p>"
-            f"<p><b>homepage:</b> <a href='{home_page or '#'}'>{home_page or '-'}</a></p>"
-            f"<p><b>project_urls:</b><br>{urls}</p>"
+            f"<p><b>{CONFIG['label_author']}:</b> {info.get('author') or CONFIG['metadata_value_unavailable']}</p>"
+            f"<p><b>{CONFIG['label_email']}:</b> {html.escape(info.get('author_email') or '') or CONFIG['metadata_value_unavailable']}</p>"
+            f"<p><b>{CONFIG['label_license']}:</b> {info.get('license') or CONFIG['metadata_value_unavailable']}</p>"
+            f"<p><b>{CONFIG['label_homepage']}:</b> <a href='{home_page or '#'}'>{home_page or CONFIG['metadata_value_unavailable']}</a></p>"
+            f"<p><b>{CONFIG['label_project_urls']}:</b><br>{urls}</p>"
             #f"<p><b>project_downs:</b><br>{downs}</p>"
             f"<p><b>{installed_text}</b></p>"
         )
+        self.summary_metadata.setTextInteractionFlags(
+            Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard
+        )
+        self.metadata.setTextInteractionFlags(
+            Qt.TextSelectableByMouse | Qt.TextSelectableByKeyboard | Qt.LinksAccessibleByMouse
+        )
         self.summary_metadata.setOpenExternalLinks(True)
         self.metadata.setOpenExternalLinks(True)
-        self.install_button.setText("Uninstall" if installed_data else "Install")
+        self.install_button.setText(CONFIG["button_uninstall"] if installed_data else CONFIG["button_install"])
         self.update_button.setEnabled(bool(installed_data))
 
     def show_screenshot(self) -> None:
         if not self.screenshots:
             self.screenshot_label.setPixmap(QPixmap())
-            self.screenshot_label.setText("Sem screenshots")
+            self.screenshot_label.setText(CONFIG["text_no_screenshots"])
             return
         pixmap = self.screenshots[self.screenshot_index].scaled(760, 260, Qt.KeepAspectRatio, Qt.SmoothTransformation)
         self.screenshot_label.clear()
@@ -588,14 +701,14 @@ class MainWindow(QMainWindow):
 
     def show_command_output(self, ok: bool, message: str) -> None:
         dialog = QDialog(self)
-        dialog.setWindowTitle("pipx" if ok else "Erro do pipx")
+        dialog.setWindowTitle(CONFIG["dialog_pipx_title"] if ok else CONFIG["dialog_pipx_error_title"])
         dialog.resize(720, 420)
 
         layout = QVBoxLayout(dialog)
         output = QPlainTextEdit()
         output.setReadOnly(True)
         output.setLineWrapMode(QPlainTextEdit.NoWrap)
-        output.setPlainText(message if ok else f"Erro: {message}")
+        output.setPlainText(message if ok else CONFIG["dialog_error_message"].format(message=message))
         output.setFont(QFont("Monospace"))
 
         buttons = QDialogButtonBox(QDialogButtonBox.Ok)
@@ -610,12 +723,12 @@ class MainWindow(QMainWindow):
         save_installed_packages(self.installed)
         self.install_button.setEnabled(True)
         self.update_button.setEnabled(self.is_installed(package_name))
-        self.install_button.setText("Uninstall" if self.is_installed(package_name) else "Install")
+        self.install_button.setText(CONFIG["button_uninstall"] if self.is_installed(package_name) else CONFIG["button_install"])
         self.populate_packages()
         self.show_command_output(ok, message)
 
     def _create_toolbar(self):
-        self.toolbar = self.addToolBar("Main")
+        self.toolbar = self.addToolBar(CONFIG["toolbar_name"])
         self.toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
 
 

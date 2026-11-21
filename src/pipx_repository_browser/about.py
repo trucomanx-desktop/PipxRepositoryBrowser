@@ -1,6 +1,6 @@
 # about.py
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 __package__ = "pipx_repository_browser"
 __program_name__ = "pipx-repository-browser"
 __author__ = "Fernando Pujaico Rivera"
