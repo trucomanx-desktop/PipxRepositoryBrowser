@@ -216,19 +216,67 @@ REPOSITORIES_DIR = os.path.join( os.path.expanduser("~"),
                             ".config", 
                             about.__package__, 
                             "repositories" )
-REPOSITORY_DEFAULT_PATH = os.path.join( REPOSITORIES_DIR,
-                            "default.json" )
 
-with open(resource_path("data", "default.json"), "r", encoding="utf-8") as f:
-    DEFAULT_REPOSITORY_CONTENT = json.load(f)
-
-configure.verify_default_config(REPOSITORY_DEFAULT_PATH,default_content=DEFAULT_REPOSITORY_CONTENT)
 
 # ---------------------------------------
-INSTALLED_FILEPATH = os.path.join( os.path.expanduser("~"),
-                            ".config", 
-                            about.__package__, 
-                            "installed.json" )
+DEFAULT_REPOSITORY_URL = (
+    "https://raw.githubusercontent.com/trucomanx-desktop/PipxRepositoryBrowser/"
+    "refs/heads/main/src/pipx_repository_browser/data/TrucomanX.Repository.json"
+)
+DEFAULT_REPOSITORY_PATH = os.path.join(REPOSITORIES_DIR, "TrucomanX.Repository.json")
+
+
+def _load_default_repository() -> dict:
+    """Use the current upstream repository, falling back to the bundled copy offline."""
+    try:
+        request = Request(
+            DEFAULT_REPOSITORY_URL,
+            headers={"User-Agent": "PyQt5PackageBrowser/1.0"},
+        )
+        with urlopen(request, timeout=12) as response:
+            content = json.loads(response.read().decode("utf-8"))
+        if not isinstance(content, dict) or not isinstance(content.get("packages"), list):
+            raise ValueError("Invalid repository JSON structure")
+        return content
+    except Exception:
+        # Keep first launch usable without a network connection.
+        with open(resource_path("data", "TrucomanX.Repository.json"), "r", encoding="utf-8") as f:
+            return json.load(f)
+
+
+DEFAULT_REPOSITORY_CONTENT = _load_default_repository()
+repository_files = list(Path(REPOSITORIES_DIR).glob("*.json")) if os.path.isdir(REPOSITORIES_DIR) else []
+if not repository_files or os.path.exists(DEFAULT_REPOSITORY_PATH):
+    repository_content = configure.verify_default_config(
+        DEFAULT_REPOSITORY_PATH,
+        default_content=DEFAULT_REPOSITORY_CONTENT,
+    )
+    # verify_default_config merges dictionaries, but repository packages are a
+    # list. Add upstream packages by name while retaining local entries/edits.
+    local_packages = repository_content.get("packages", [])
+    if isinstance(local_packages, list):
+        known_names = {
+            package.get("name")
+            for package in local_packages
+            if isinstance(package, dict) and package.get("name")
+        }
+        new_packages = [
+            package
+            for package in DEFAULT_REPOSITORY_CONTENT.get("packages", [])
+            if isinstance(package, dict)
+            and package.get("name")
+            and package["name"] not in known_names
+        ]
+        if new_packages:
+            repository_content["packages"].extend(new_packages)
+            with open(DEFAULT_REPOSITORY_PATH, "w", encoding="utf-8") as f:
+                json.dump(repository_content, f, ensure_ascii=False, indent=4)
+
+# ---------------------------------------
+INSTALLED_FILEPATH = os.path.join(  os.path.expanduser("~"),
+                                    ".config", 
+                                    about.__package__, 
+                                    "installed.json" )
 
 INSTALLED_FILEPATH = Path(INSTALLED_FILEPATH)
 
@@ -1071,4 +1119,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
